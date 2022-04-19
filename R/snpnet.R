@@ -95,6 +95,8 @@
 #'                 \item{KKT.verbose}{a logical value indicating if details on KKT check should be printed.}
 #'                 \item{increase.size}{the increase in batch size if the KKT condition fails often in recent iterations.
 #'                              Default is half of the batch size.}
+#'                 \item{plink2.singleprec}{a logical value indicating whether single-precision floating number should be used in plink2.
+#'                              Default is FALSE.}
 #'                 \item{plink2.path}{the user-specified path to plink2 (default: plink2)}
 #'                 \item{zstdcat.path}{the user-specified path to zstdcat (default: zstdcat)}
 #'                 \item{zcat.path}{the user-specified path to zcat (to read a zcat compressed phenotype file) (default: zdcat)}

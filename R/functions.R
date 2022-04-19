@@ -396,7 +396,11 @@ readBinMat <- function(fhead, configs){
     cols <- data.table::fread(paste0(fhead, '.cols'), head=F)$V1
     bin.reader <- file(paste0(fhead, '.bin'), 'rb')
     M = matrix(
-        readBin(bin.reader, 'numeric', n=length(rows)*length(cols), size=4, endian = configs[['endian']]),
+        readBin(
+          bin.reader, 'numeric', n=length(rows)*length(cols),
+          size=ifelse(configs[['plink2.singleprec']], 4, 8),
+          endian=configs[['endian']]
+        ),
         nrow=length(rows), ncol=length(cols), byrow = T
     )
     close(bin.reader)
@@ -438,7 +442,7 @@ computeProduct <- function(residual, pfile, vars, stats, configs, iter) {
     '--read-freq', paste0(configs[['gcount.full.prefix']], '.gcount'),
     '--keep', residual_f,
     '--out', stringr::str_replace_all(residual_f, '.tsv$', ''),
-    '--variant-score', residual_f, 'zs', 'bin4', 'single-prec'
+    '--variant-score', residual_f, 'zs', ifelse(configs[['plink2.singleprec']], 'bin4 single-prec', 'bin')
   )
   if (!is.null(configs[['mem']])) {
     cmd_plink2 <- paste(cmd_plink2, '--memory', as.integer(configs[['mem']]) - ceiling(sum(as.matrix(gc_res)[,2])))
@@ -680,6 +684,7 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
         gcount.full.prefix=NULL,
         endian="little",
         metric=NULL,
+        plink2.singleprec=FALSE,
         plink2.path='plink2',
         zstdcat.path='zstdcat',
         zcat.path='zcat',
