@@ -93,6 +93,8 @@
 #'                              this number of consecutive decreases in the validation metric.}
 #'                 \item{verbose}{a logical value indicating if more detailed messages should be printed.}
 #'                 \item{KKT.verbose}{a logical value indicating if details on KKT check should be printed.}
+#'                 \item{KKT.thresh}{an experimental option to allow users to specify threshold in KKT check. Please
+#'                              do not change unless you have a clear understanding of numerical precision issue. (default: 0)}
 #'                 \item{increase.size}{the increase in batch size if the KKT condition fails often in recent iterations.
 #'                              Default is half of the batch size.}
 #'                 \item{plink2.singleprec}{a logical value indicating whether single-precision floating number should be used in plink2.

@@ -511,9 +511,34 @@ KKT.check <- function(residual, pfile, vars, n.train, current.lams, prev.lambda.
   if (configs[['KKT.verbose']]) snpnetLoggerTimeDiff('- mat.cmp.', indent=2, start.time=time.KKT.check.start)
 
   # check KKT violation using mat.cmp
-  num.violates  <- apply(abs(prod.full[weak.vars, , drop = FALSE]) - mat.cmp, 2, function(x) sum(x > 0, na.rm = T))
+  mat.cmp.diff <- abs(prod.full[weak.vars, , drop = FALSE]) - mat.cmp
+  max.violates <- apply(
+    mat.cmp.diff , 2,
+    function(x) max(x, na.rm = T)
+  )
+  num.violates  <- apply(
+    mat.cmp.diff, 2,
+    # We consider KKT.threshold to cope with numerical precision issue.
+    # One can speficy .Machine$double.eps etc in configs[["KKT.thresh"]].
+    # In practice, the numerical precision error depends on numerous factors,
+    # including single-/double- precision used in plink2, sample size,
+    # sample weights, and penalty factors. So, please be careful when
+    # specifying non-zero values for configs[["KKT.thresh"]].
+    function(x) sum(x > 0 - configs[["KKT.thresh"]], na.rm = T)
+  )
   idx.violation <- which((num.violates != 0) & ((1:num.lams) >= prev.lambda.idx))
-  max.valid.idx <- ifelse(length(idx.violation) == 0, num.lams, min(idx.violation) - 1)
+  max.valid.idx <- ifelse(
+    length(idx.violation) == 0,
+    num.lams,
+    ifelse(
+        # when we find KKT violation across all the lambda indices tested,
+        # we check if the first violation is within the KKT.threshold range
+        # to rescue one lambda index
+        (min(idx.violation) == 1) &  head(max.violates, 1) < configs[["KKT.thresh"]],
+        1,
+        min(idx.violation) - 1
+    )
+  )
 
   if (max.valid.idx > 0) {
     score <- abs(prod.full[, max.valid.idx])
@@ -550,7 +575,8 @@ KKT.check <- function(residual, pfile, vars, n.train, current.lams, prev.lambda.
       max.abs.prod.inactive = max.abs.prod.inactive,
       max.abs.prod.strong = max.abs.prod.strong,
       max.abs.prod.weak = max.abs.prod.weak,
-      num.violates = num.violates
+      num.violates = num.violates,
+      max.violates = max.violates
     ))
   }
   out
@@ -672,6 +698,7 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
         keep = NULL,
         lambda.min.ratio = NULL,
         KKT.verbose = FALSE,
+        KKT.thresh = 0,
         save = FALSE,
         save.computeProduct = FALSE,
         prevIter = 0,
