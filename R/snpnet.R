@@ -7,9 +7,17 @@
 #' "A Fast and Scalable Framework for Large-Scale and Ultrahigh-Dimensional Sparse Regression with Application to the UK Biobank."
 #' PLOS Genetics. 16, e1009141 (2020). https://doi.org/10.1371/journal.pgen.1009141
 #'
-#' @usage snpnet(genotype.pfile, phenotype.file, phenotype, family = NULL, covariates = NULL, alpha
-#'   = 1, nlambda = 100, lambda.min.ratio = ifelse(nobs < nvars, 0.01, 1e-04), lambda = NULL,
-#'   split.col = NULL, p.factor = NULL, status.col = NULL, mem = NULL, configs = NULL)
+#' Ruilin Li, Christopher Chang, Johanne M. Justesen, Yosuke Tanigawa, Junyang Qiang, Trevor Hastie, Manuel A. Rivas, Robert Tibshirani.
+#' "Fast Lasso Method for Large-Scale and Ultrahigh-Dimensional Cox Model with Applications to UK Biobank."
+#' Biostatistics. 23(2):522-540 (2022). https://doi.org/10.1093/biostatistics/kxaa038
+#'
+#' Ruilin Li, Christopher Chang, Yosuke Tanigawa, Balasubramanian Narasimhan, Trevor Hastie, Robert Tibshirani, Manuel A Rivas
+#' "Fast numerical optimization for genome sequencing data in population biobanks"
+#' Bioinformatics. 37(22):4148-4155 (2021). https://doi.org/10.1093/bioinformatics/btab452
+#'
+#' @usage snpnet(genotype.pfile, phenotype.file, phenotype, family = NULL, covariates = NULL,
+#'   weights = NULL, alpha = 1, nlambda = 100, lambda.min.ratio = ifelse(nobs < nvars, 0.01, 1e-04),
+#'   lambda = NULL, split.col = NULL, p.factor = NULL, status.col = NULL, mem = NULL, configs = NULL)
 #'
 #' @param genotype.pfile the PLINK 2.0 pgen file that contains genotype.
 #'                       We assume the existence of genotype.pfile.{pgen,pvar.zst,psam}.
@@ -25,6 +33,8 @@
 #' @param covariates a character vector containing the names of the covariates included in the lasso
 #'                   fitting, whose coefficients will not be penalized. The names must exist in the
 #'                   column names of the phenotype file.
+#' @param weights a named vector of sample weights. If not provided or NULL, 1 for all samples will
+#'                be used as the default value.
 #' @param alpha the elastic-net mixing parameter, where the penalty is defined as
 #'              alpha * ||beta||_1 + (1-alpha)/2 * ||beta||_2^2. alpha = 1 corresponds to the lasso penalty,
 #'              while alpha = 0 corresponds to the ridge penalty.
@@ -96,6 +106,7 @@
 #'
 #' @export
 snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, covariates = NULL,
+                   weights = NULL,
                    alpha = 1, nlambda = 100, lambda.min.ratio = ifelse(nobs < nvars, 0.01, 1e-04),
                    lambda = NULL, split.col = NULL, p.factor = NULL, status.col = NULL, mem = NULL,
                    configs = NULL, sel.inf=FALSE) {
@@ -151,6 +162,12 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       ids[['train']] <- phe[['master']]$ID
   }
 
+  ### --- Normalize the observation weights --- ###
+  if(! is.null(weights)){
+    weights <- weights[ids[['train']]]
+    weights <- length(weights) * weights / sum(weights)
+  }
+
   ### --- Prepare the feature matrix --- ###
   features <- list()
   plinkfeature <- list()
@@ -202,17 +219,21 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
   if (configs[['prevIter']] == 0) {
     snpnetLogger("Iteration 0")
     if (family == "cox"){
-        glmmod <- myglmnet::myglmnet(as.matrix(features[['train']]), response[['train']], family="cox", standardize=F, lambda=c(0))
+        glmmod <- myglmnet::myglmnet(as.matrix(features[['train']]), response[['train']], family="cox", weights=weights, standardize=F, lambda=c(0))
         residual <- glmmod$residuals
     } else {
         glmmod <- stats::glm(
             stats::as.formula(paste(phenotype, " ~ ", paste(c(1, covariates), collapse = " + "))),
-            data = phe[['train']], family = family
+            data = phe[['train']], family = family, weights=weights
         )
         residual <- matrix(stats::residuals(glmmod, type = "response"), ncol = 1) / nrow(phe[['train']])
     }
     rownames(residual) <- rownames(phe[['train']])
     colnames(residual) <- c('0')
+
+    if(! is.null(weights)){
+      residual <- residual * weights[rownames(residual)]
+    }
 
     if (configs[['verbose']]) snpnetLogger("  Start computing inner product for initialization ...")
     time.prod.init.start <- Sys.time()
@@ -343,7 +364,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       penalty.factor <- c(rep(0, length(covariates)), p.factor[(plinkfeature[['train']]@colname)[-(1:length(covariates))]])
     }
     current.lams <- full.lams[1:num.lams]
-    
+
     # Do need for adjustment with myglmnet
     #current.lams.adjusted <- full.lams[1:num.lams] * sum(penalty.factor) / length(penalty.factor)  # adjustment to counteract penalty factor normalization in glmnet
     time.glmnet.start <- Sys.time()
@@ -359,11 +380,11 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
 
 
     glmfit <- myglmnet::myglmnet(
-        plinkfeature[['train']], response[['train']], family = family, alpha = alpha,
+        plinkfeature[['train']], response[['train']], family = family, weights = weights, alpha = alpha,
         lambda = current.lams[start.lams:num.lams], penalty.factor = penalty.factor,
         thresh = configs[['glmnet.thresh']], beta0 = beta0
     )
-    
+
     residual <- glmfit$residuals
     pred.train <- myglmnet::PlinkPredict(glmfit, plinkfeature[['train']])
 
@@ -372,6 +393,10 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
     rownames(residual) <- rownames(phe[['train']])
     colnames(residual) <- start.lams:num.lams
     if (configs[['verbose']]) snpnetLoggerTimeDiff("End fitting Glmnet.", time.glmnet.start, indent=2)
+
+    if(! is.null(weights)){
+      residual <- residual * weights[rownames(residual)]
+    }
 
     # if (configs[['verbose']]) memoryProfile(glmfit, message="glmfit")
 
@@ -433,7 +458,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
           snpnetLogger('metric val.')
           metric.val[start.lams:max.valid.idx] <- computeMetric(pred.val[, 1:check.obj[["max.valid.idx"]], drop = F], response[['val']], configs[['metric']])
       }
-      
+
 
       score <- check.obj[["score"]]
       is.ever.active <- apply(glmfit$beta[, 1:check.obj[["max.valid.idx"]], drop = F], 1, function(x) any(x != 0))
@@ -507,7 +532,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
     ref.start = Sys.time()
     if(family == "cox"){
       #refit = survival::coxph(refit.response ~ predictors)
-      refit = myglmnet::myglmnet(predictors, refit.response, family="cox", standardize=F, lambda=c(0), beta0=train_beta)
+      refit = myglmnet::myglmnet(predictors, refit.response, family="cox", weights = weights, standardize=F, lambda=c(0), beta0=train_beta)
       refit_coefficients = as.matrix(refit$beta)[,1]
       hessian = cox_fisher(predictors, refit_coefficients, refit.response[,1], refit.response[,2])
     } else {
