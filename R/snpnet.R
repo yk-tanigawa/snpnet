@@ -89,6 +89,7 @@
 #'                 \item{use.glmnetPlus}{a logical value whether to use glmnet with warm start, if
 #'                              the glmnetPlus package is available. Currently only "gaussian" family is supported.}
 #'                 \item{early.stopping}{a logical value indicating whether early stopping based on validation metric is desired.}
+#'                 \item{early.stopping.size}{an integer value for a stopping criterion based on the size of models.}
 #'                 \item{stopping.lag}{a parameter for the stopping criterion such that the procedure stops after
 #'                              this number of consecutive decreases in the validation metric.}
 #'                 \item{verbose}{a logical value indicating if more detailed messages should be printed.}
@@ -487,9 +488,17 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       }
       for (klam in (prev.max.valid.idx+1):max.valid.idx) {
         if (validation) {
-            snpnetLogger(paste0("- Lambda idx ", klam, ". Training: ", metric.train[klam], ". Validation: ", metric.val[klam]), indent=1)
+            snpnetLogger(sprintf(
+                "- Lambda idx %3d. Size: %5d. Training: %.4f. Validation: %.4f.",
+                klam, sum(beta[[klam]] != 0),
+                metric.train[klam], metric.val[klam]
+            ), indent=1)
         } else {
-            snpnetLogger(paste0("- Lambda idx ", klam, ". Training: ", metric.train[klam], ". "), indent=1)
+            snpnetLogger(sprintf(
+                "- Lambda idx %3d. Size: %5d. Training: %.4f.",
+                klam, sum(beta[[klam]] != 0),
+                metric.train[klam]
+            ), indent=1)
         }
       }
       prev.max.valid.idx <- max.valid.idx
@@ -500,7 +509,19 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
 
     ### --- Check stopping criteria --- ####
     if (max.valid.idx == configs[['nlambda']]) break
-    if (validation && checkEarlyStopping(metric.val, max.valid.idx, iter, configs)) break
+    if (
+        configs[['early.stopping']] &&
+        validation &&
+        checkEarlyStopping(metric.val, max.valid.idx, iter, configs)
+    ) break
+    if (
+        configs[['early.stopping']] &&
+        configs[['early.stopping.size']] > 0 &&
+        checkEarlyStoppingByModelSize(
+            sapply(beta, function(b){sum(b != 0)}),
+            max.valid.idx, iter, configs
+        )
+    ) break
   }
   }
   snpnetLoggerTimeDiff("End snpnet.", time.start)

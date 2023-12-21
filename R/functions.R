@@ -643,7 +643,7 @@ checkEarlyStopping <- function(metric.val, max.valid.idx, iter, configs){
           (max.val.1 > max.val.2)
       ) {
           snpnetLogger(sprintf(
-              "Early stopped at iteration %d (Lambda idx=%d ) with validation metric: %.14f.",
+              "Early stopped at iteration %d (Lambda idx=%d) with validation metric: %.14f.",
               iter, which.max(metric.val), max(metric.val, na.rm = T)
           ))
           snpnetLogger(paste0(
@@ -655,6 +655,55 @@ checkEarlyStopping <- function(metric.val, max.valid.idx, iter, configs){
       } else {
           earlyStop <- FALSE
       }
+    }
+    earlyStop
+}
+
+checkEarlyStoppingByModelSize <- function(model_size, max.valid.idx, iter, configs){
+    # max.valid.idx: the largest lambda index where the Lasso solution is valid
+    snpnetLogger('Checking the early stopping criteria by model size.')
+    snpnetLogger(
+        sprintf(
+            'Specifically, we check whether if model_size > %d for at least %d models.',
+            configs[['early.stopping.size']], configs[['stopping.lag']]
+        ),
+        indent=1
+    )
+    snpnetLogger(
+        "Note: those are configurable parameters. Please specify configs[['early.stopping']] and configs[['stopping.lag']].",
+        indent=1
+    )
+
+    # compute the max.valid.idx - lag
+    max.valid.idx.lag <- max.valid.idx - configs[['stopping.lag']]
+
+    if(max.valid.idx.lag < 1 || configs[['early.stopping.size']] <= 0){
+        # we don't have sufficient number of valid models. Let's keep moving forward.
+        earlyStop <- FALSE
+    }else{
+        max.size.1 <- max(model_size[1:(max.valid.idx.lag)])
+        argmax.size.1 <- which.max(model_size[1:(max.valid.idx.lag)])
+        max.size.2 <- max(model_size[(max.valid.idx.lag+1):max.valid.idx])
+        argmax.size.2 <- max.valid.idx.lag + which.max(model_size[(max.valid.idx.lag+1):max.valid.idx])
+
+        if (
+            (configs[['early.stopping']]) &&
+            (max.valid.idx > configs[['stopping.lag']]) &&
+            (max.size.1 > configs[['early.stopping.size']])
+        ) {
+            snpnetLogger(sprintf(
+                "Early stopped at iteration %d (Lambda idx=%d) with model size: %5d.",
+                iter, argmax.size.2, max.size.2
+            ))
+            snpnetLogger(paste0(
+                "Previous ones: ",
+                paste(model_size[(max.valid.idx-configs[['stopping.lag']]+1):max.valid.idx], collapse = ", "),
+                "."
+            ), indent=1)
+            earlyStop <- TRUE
+        } else {
+            earlyStop <- FALSE
+        }
     }
     earlyStop
 }
@@ -693,6 +742,7 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
         increase.size = NULL,
         standardize.variant = FALSE,
         early.stopping = TRUE,
+        early.stopping.size = 0,
         stopping.lag = 2,
         niter = 50,
         keep = NULL,
@@ -742,6 +792,9 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
     if(is.null(out[['gcount.full.prefix']])) out[['gcount.full.prefix']] <- file.path(
         out[['results.dir']], out[["meta.dir"]], out['gcount.basename.prefix']
     )
+
+    # validate (some of the) config parameters
+    stopifnot(is.numeric(out[['early.stopping.size']]))
 
     out
 }
