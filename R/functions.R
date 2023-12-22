@@ -670,7 +670,7 @@ checkEarlyStoppingByModelSize <- function(model_size, max.valid.idx, iter, confi
         indent=1
     )
     snpnetLogger(
-        "Note: those are configurable parameters. Please specify configs[['early.stopping']] and configs[['stopping.lag']].",
+        "Note: those are configurable parameters. Please specify configs[['early.stopping.size']] and configs[['stopping.lag']].",
         indent=1
     )
 
@@ -750,6 +750,7 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
         KKT.verbose = FALSE,
         KKT.thresh = 0,
         save = FALSE,
+        save.lag = 2,
         save.computeProduct = FALSE,
         prevIter = 0,
         results.dir = NULL,
@@ -795,6 +796,8 @@ setupConfigs <- function(configs, genotype.pfile, phenotype.file, phenotype, cov
 
     # validate (some of the) config parameters
     stopifnot(is.numeric(out[['early.stopping.size']]))
+    stopifnot(is.numeric(out[['stopping.lag']]))
+    stopifnot(is.numeric(out[['save.lag']]))
 
     out
 }

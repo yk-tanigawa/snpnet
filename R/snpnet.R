@@ -72,6 +72,7 @@
 #'                 \item{prevIter}{if non-zero, it indicates the last successful iteration in the procedure so that
 #'                              we can restart from there. niter should be no less than prevIter.}
 #'                 \item{save}{a logical value whether to save the intermediate results (e.g. in case of job failure and restart).}
+#'                 \item{save.lag}{By default, we keep the most two recent intermediate results. Setting save.lag=0 will keep all the intermediate results.}
 #'                 \item{results.dir}{the path to the directory where meta and intermediate results are saved.}
 #'                 \item{meta.dir}{the relative path to the subdirectory used to store the computed
 #'                              summary statistics, e.g. mean, missing rate, standard deviation (when `standardization = TRUE`).
@@ -477,6 +478,18 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       save(metric.train, metric.val, glmnet.results, full.lams, a0, beta, prev.beta, max.valid.idx,
            features.to.keep, num.lams, lambda.idx, score, num.new.valid, increase.snp.size, configs,
            file = file.path(configs[['results.dir']], configs[["save.dir"]], paste0("output_iter_", iter, ".RData")))
+      if (
+        configs[['save.lag']] > 0 &&
+        iter > configs[['save.lag']] &&
+        file.exists(
+          file.path(configs[['results.dir']], configs[["save.dir"]], sprintf("output_iter_%d.RData", iter - configs[['save.lag']]))
+        )
+      ) {
+        system(sprintf(
+          "rm %s",
+          file.path(configs[['results.dir']], configs[["save.dir"]], sprintf("output_iter_%d.RData", iter - configs[['save.lag']]))
+        ))
+      }
     }
 
     if ( prev.max.valid.idx < max.valid.idx ) {
