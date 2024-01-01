@@ -123,7 +123,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
 
   ### --- Read genotype IDs --- ###
   ids <- list(); phe <- list()
-  ids[['psam']] <- readIDsFromPsam(paste0(genotype.pfile, '.psam'))
+  ids[['psam']] <- readIDsFromPsam(sprintf('%s.psam', genotype.pfile))
 
   ### --- combine the specified configs with the default values --- ###
   if (!is.null(lambda)) nlambda <- length(lambda)
@@ -199,13 +199,13 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
   }
 
   ### --- Read genotypes --- ###
-  vars <- dplyr::mutate(dplyr::rename(data.table::fread(cmd=paste0(configs[['zstdcat.path']], ' ', paste0(genotype.pfile, '.pvar.zst'))), 'CHROM'='#CHROM'), VAR_ID=paste(ID, ALT, sep='_'))$VAR_ID
-  pvar <- pgenlibr::NewPvar(paste0(genotype.pfile, '.pvar.zst'))
+  vars <- dplyr::mutate(dplyr::rename(data.table::fread(cmd=paste0(configs[['zstdcat.path']], ' ', sprintf('%s.pvar.zst', genotype.pfile))), 'CHROM'='#CHROM'), VAR_ID=paste(ID, ALT, sep='_'))$VAR_ID
+  pvar <- pgenlibr::NewPvar(sprintf('%s.pvar.zst', genotype.pfile))
   pgen <- list()
   samples_subset = list()
   for(s in splits) {
     samples_subset[[s]] <- match(ids[[s]], ids[['psam']])
-    pgen[[s]] <- pgenlibr::NewPgen(paste0(genotype.pfile, '.pgen'), pvar=pvar, sample_subset=samples_subset[[s]])
+    pgen[[s]] <- pgenlibr::NewPgen(sprintf('%s.pgen', genotype.pfile), pvar=pvar, sample_subset=samples_subset[[s]])
   }
   pgenlibr::ClosePvar(pvar)
 
@@ -281,9 +281,9 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
     earlyStopNow <- FALSE
   } else {
     time.load.start <- Sys.time()
-    snpnetLogger(paste0("Recover iteration ", configs[['prevIter']]))
+    snpnetLogger(sprintf("Recover iteration %d", configs[['prevIter']]))
     current.configs <- configs
-    load(file.path(configs[['results.dir']], configs[["save.dir"]], paste0("output_iter_", configs[['prevIter']], ".RData")))
+    load(file.path(configs[['results.dir']], configs[["save.dir"]], sprintf("output_iter_%d.RData", configs[['prevIter']])))
     configs <- current.configs
     chr.to.keep <- setdiff(features.to.keep, covariates)
     for(s in splits){
@@ -311,7 +311,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
   if(! earlyStopNow){
   for (iter in (configs[['prevIter']]+1):configs[['niter']]) {
     time.iter.start <- Sys.time()
-    snpnetLogger(paste0("Iteration ", iter), log.time=time.iter.start)
+    snpnetLogger(sprintf("Iteration %d", iter), log.time=time.iter.start)
 
     num.lams <- min(num.lams + ifelse(lambda.idx >= num.lams-configs[["nlams.delta"]]/2, configs[["nlams.delta"]], 0),
                     configs[['nlambda']])   ## extend lambda list if necessary
@@ -351,9 +351,9 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       configs[['num.snps.batch']] <- configs[['num.snps.batch']] + configs[['increase.size']]
     if (configs[['verbose']]) snpnetLoggerTimeDiff("End updating feature matrix.", time.update.start, indent=2)
     if (configs[['verbose']]) {
-      snpnetLogger(paste0("- # ever-active variables: ", length(features.to.keep), "."), indent=2)
-      snpnetLogger(paste0("- # newly added variables: ", length(features.to.add), "."), indent=2)
-      snpnetLogger(paste0("- Total # variables in the strong set: ", ncol(plinkfeature[['train']]), "."), indent=2)
+      snpnetLogger(sprintf("- # ever-active variables: %d.", length(features.to.keep)), indent=2)
+      snpnetLogger(sprintf("- # newly added variables: %d.", length(features.to.add)), indent=2)
+      snpnetLogger(sprintf("- Total # variables in the strong set: %d.", ncol(plinkfeature[['train']])), indent=2)
     }
 
     # if (configs[['verbose']]) memoryProfile(features[['train']], message="features[['train']]")
@@ -477,7 +477,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
     if (configs[['save']]) {
       save(metric.train, metric.val, glmnet.results, full.lams, a0, beta, prev.beta, max.valid.idx,
            features.to.keep, num.lams, lambda.idx, score, num.new.valid, increase.snp.size, configs,
-           file = file.path(configs[['results.dir']], configs[["save.dir"]], paste0("output_iter_", iter, ".RData")))
+           file = file.path(configs[['results.dir']], configs[["save.dir"]], sprintf("output_iter_%d.RData", iter)))
       if (
         configs[['save.lag']] > 0 &&
         iter > configs[['save.lag']] &&
@@ -517,7 +517,7 @@ snpnet <- function(genotype.pfile, phenotype.file, phenotype, family = NULL, cov
       prev.max.valid.idx <- max.valid.idx
     }
     time.iter.end <- Sys.time()
-    snpnetLoggerTimeDiff(paste0("End iteration ", iter, '.'), time.iter.start, time.iter.end, indent=1)
+    snpnetLoggerTimeDiff(sprintf("End iteration %d.", iter), time.iter.start, time.iter.end, indent=1)
     snpnetLoggerTimeDiff("The total time since start.", time.start, time.iter.end, indent=2)
 
     ### --- Check stopping criteria --- ####
