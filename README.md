@@ -2,44 +2,69 @@
 
 License: GPL-2
 
-### Reference:
-  - Ruilin Li, Christopher Chang, Yosuke Tanigawa, Balasubramanian Narasimhan, Trevor Hastie, Robert Tibshirani, Manuel A. Rivas. "Fast Numerical Optimization for Genome Sequencing Data in Population Biobanks." doi: https://doi.org/10.1101/2021.02.14.431030.
-  - Junyang Qian, Yosuke Tanigawa, Wenfei Du, Matthew Aguirre, Chris Chang, Robert Tibshirani, Manuel A. Rivas, Trevor Hastie. "A Fast and Scalable Framework for Large-Scale and Ultrahigh-Dimensional Sparse Regression with Application to the UK Biobank." PLOS Genetics. 16, e1009141 (2020). https://doi.org/10.1371/journal.pgen.1009141
-  - Ruilin Li, Christopher Chang, Johanne Marie Justesen, Yosuke Tanigawa, Junyang Qiang, Trevor Hastie, Manuel A. Rivas, Robert Tibshirani. “Fast Lasso Method for Large-Scale and Ultrahigh-Dimensional Cox Model with Applications to UK Biobank.” Biostatistics, 2020. https://doi.org/10.1093/biostatistics/kxaa038.
 
+## Installation:
 
-### Installation:
 To use this package you will need to install the following softwares and packages:
+
 - [zstd(>=1.4.4)](https://github.com/facebook/zstd). Make sure the zstd binaries path is in the environment variable PATH, which should be automatically done if you install using [conda](https://anaconda.org/conda-forge/zstd), [pip](https://pypi.org/project/zstd/) or [brew](https://formulae.brew.sh/formula/zstd).
 - [PLINK 2.0](https://www.cog-genomics.org/plink/2.0/). Make sure the plink2 binary path is in the environment variable PATH.
 - Most of the R dependencies can be downloaded from CRAN. Some dependencies are not available on CRAN. These R packages can be installed with:
-```r
+
+```{r}
 library(devtools)
 install_url("https://github.com/RuilinLi/myglmnet/archive/main.zip")
 install_github("chrchang/plink-ng", subdir="/2.0/cindex")
 install_github("RuilinLi/plink-ng", subdir="/2.0/pgenlibr")
 ```
+
+Please note that we use `chrchang`'s `plink-ng` for `cindex` and `RuilinLi`'s `plink-ng` for `pgenlibr`.
+
 Finally, to install this package, run
-```r
-devtools::install_github("rivas-lab/snpnet", ref="compact")
+
+```{r}
+devtools::install_github("yk-tanigawa/snpnet", ref="compact_yt")
 ```
 
-### Usage
+### Example conda environment
+
+To create an R conda environment to install `snpnet`, you may use the following [`mamba`](https://github.com/mamba-org/mamba) command:
+
+```{bash}
+mamba create -n snpnet_r4 conda-forge::compilers 'r-base=>4.0.0' r-essentials r-r.utils r-devtools conda-forge::eigen conda-forge::r-rcppeigen
+```
+
+## Testing installation
+
+You may check the [`vignettes`](/vignettes) and run simple examples there to test the installation of the package.
+
+
+## Usage
+
 The main exported function of this package are `snpnet` and `snpnet2Base`. Both functions solve large-scale and high-dimensional regularized regression for quantitative, binary (case/control), and survival responses.
+
 #### When should I use `snpnet`?
+
 `snpnet` should be preferred when
+
 - Variable screening is needed. This would be the case if the number of genetic variants is much larger than the number of individuals in the training set, and when the size of the data matrix is larger than (or close to) the size of system memory. For example, when the training data has 200,000 individuals and 1,000,000 variants, the input matrix takes about 200,000 * 1,000,000 * 2 bits = 50 GB. In this case, if your system has less than 50GB of memory then `snpnet` should be used.
+
 #### When should I use `snpnet2Base`?
+
 `snpnet2Base` should be preferred when
+
 - you would like to solve a group Lasso problem, which is not available in `snpnet`
 - the input data matrix is sufficiently sparse. This usualy means a large number of variants are rare variants (say MAF < 0.5%). The solver used in this function will exploit the sparsity to accelerate fitting.
 - `snpnet2Base` also offers a slightly more flexible, user-defined filter of genetic variants, see below.
 
-#### How to use `snpnet`?
-The input arguments of this version of `snpnet` is essentially the same as the earlier version. See the [vignette](https://github.com/rivas-lab/snpnet/blob/compact/vignettes/vignette.pdf).
+### How to use `snpnet`?
 
-#### How to use `snpnet2Base`?
+The input arguments of this version of `snpnet` is essentially the same as the earlier version. See the [vignette](/vignettes/vignette.pdf).
+
+### How to use `snpnet2Base`?
+
 Here are the input arguments of `snpnet2Base`
+
 - `genotype.pfile`, the prefix of PLINK2's pgen format of the genetic variants used for prediction. In particular, these three files should exist `genotype.pfile.{pgen,pvar.zst,psam}`. If you would like to utilize sparsity in this matrix, make sure that the reference allele in this file is the major allele. This can be done using Plink2 with the flag `--maj-ref`.
 - `phenotype.file` the path of the file that contains the phenotype values and can be read as a table. There should be FID (family ID) and IID (individual ID) columns containing the identifier for each individual, and the phenotype column(s). (optional) some covariate columns and a column specifying the training/validation split can be included in this file.
 - `phenotype` the column name of the phenotype in `phenotype.file`
@@ -59,11 +84,11 @@ Here are the input arguments of `snpnet2Base`
   2. Adding columns to provide additional information (for example the gene symbol. This modified data table will be part of the output of `snpnet2Base`.
   3. Reordering the rows. This is necessary for group Lasso, where the variants in the same group must be in adjacent rows in this data table (see the next bullet point).
 
-- `GroupMap` (required only for group Lasso), which is again a function (or NULL if running Lasso) takes the output from `VariantFilter` and returns a strictly increasing integer vector `out` such that. The variants in group `i` occupy the rows `out[i] + 1, ..., out[i+1]` in the output of `VariantFilter`. See [here](https://github.com/rivas-lab/snpnet/blob/a7c95cceded3bfb0881f77d92fd6a24ac17f7171/R/sparse.R#L343) for an example. 
+- `GroupMap` (required only for group Lasso), which is again a function (or NULL if running Lasso) takes the output from `VariantFilter` and returns a strictly increasing integer vector `out` such that. The variants in group `i` occupy the rows `out[i] + 1, ..., out[i+1]` in the output of `VariantFilter`. See [here](https://github.com/rivas-lab/snpnet/blob/a7c95cceded3bfb0881f77d92fd6a24ac17f7171/R/sparse.R#L343) for an example.
 - `family` (optional), can be one of `'gaussian', 'binomial', 'cox'`.
 - `covariates`, the column names of the covariates in `phenotype.file`.
 - `sparse` (optional), if set TRUE, this function will try to use a sparse representation of the input genetic matrix for the training data.
-- `nlambda` (optional), number of regularization parameters to try. 
+- `nlambda` (optional), number of regularization parameters to try.
 - `lambda.min.ratio` (optional), the ratio of the largest regularization parameter (so that the coefficients just become non-zero) and the smallest one.
 -  `lambda` (optional), user-specified regularization parameters.
 -  `split.col` (optional), column name of the variable that specifies the training/validation split in `phenotype.file`.
@@ -74,8 +99,23 @@ Here are the input arguments of `snpnet2Base`
     2. `gcount.full.prefix` a prefix (including path) where the intermediate data the preprocessing step generates should be stored
     3. `nCores` number of threads to use in the preprocessing step.
 
-#### Select the number of threads
-Both exported function use OpenMP to parallellize their solvers. To change the number of cores to use (say to 16) when fitting run `OMP_NUM_THREADS=16 R` or `OMP_NUM_THREADS=16 Rscript Your_script_name.R` (this will also change the number of threads of other functions that uses OpenMP in the same session). The default will use all core avaliable in the machine. On our machine we observe when the number of threads exceeds 12-16 the performance improvement plateaus, but this could vary depending on the problem size, the processor, and memory system. 
+### Select and specify the number of threads
+
+Both exported function use OpenMP to parallellize their solvers. To change the number of cores to use (say to 16) when fitting run `OMP_NUM_THREADS=16 R` or `OMP_NUM_THREADS=16 Rscript Your_script_name.R` (this will also change the number of threads of other functions that uses OpenMP in the same session). The default will use all core avaliable in the machine. On our machine we observe when the number of threads exceeds 12-16 the performance improvement plateaus, but this could vary depending on the problem size, the processor, and memory system.
 
 ### Selective Inference
+
 `snpnet` implements post-selection inference method developed in [this paper](https://arxiv.org/pdf/1902.07884.pdf), which provides asymptotically valid confidence intervals of the parameter estimates conditional on the selection event. To use it, set `sel.inf = T` in `snpnet` call. To achieve higher power, the confidence interval and p-values are based on the refitting results from the combined training and validation set.
+
+
+## Version history:
+
+- The original `snpnet` implementation as described in [Qian et al. 2020](https://doi.org/10.1371/journal.pgen.1009141) is in [here](https://github.com/rivas-lab/snpnet/tree/master) (the `master` branch in the Rivas lab repository). The same repository also implements the Cox model extension of the approach as described in [Li et al. 2020](https://doi.org/doi:10.1093/biostatistics/kxaa038).
+- There is an optimized implementation as described in [Li et al. 2021](https://doi.org/10.1093/bioinformatics/btab452), which is available [here](https://github.com/rivas-lab/snpnet/tree/compact) (the `compact` branch).
+- We have minor bug fix and improvements (including `save.lag` option) available in this repository.
+
+## Reference:
+
+- J. Qian, Y. Tanigawa, W. Du, M. Aguirre, C. Chang, R. Tibshirani, M. A. Rivas, T. Hastie. [A fast and scalable framework for large-scale and ultrahigh-dimensional sparse regression with application to the UK Biobank](https://doi.org/10.1371/journal.pgen.1009141). PLoS Genet. 16, e1009141 (2020)
+- R. Li, C. Chang, J. M. Justesen, Y. Tanigawa, J. Qiang, T. Hastie, M. A. Rivas, R. Tibshirani. [Fast Lasso method for large-scale and ultrahigh-dimensional Cox model with applications to UK Biobank](https://doi.org/doi:10.1093/biostatistics/kxaa038). Biostatistics. 23(2), 522-540 (2020).
+- R. Li, C. Chang, Y. Tanigawa, B. Narasimhan, T. Hastie, R. Tibshirani, M. A. Rivas. [Fast Numerical Optimization for Genome Sequencing Data in Population Biobanks](https://doi.org/10.1093/bioinformatics/btab452). Bioinformatics 37(22), 4148-4155 (2021).
