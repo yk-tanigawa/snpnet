@@ -131,3 +131,14 @@ The `snpnet` package implements the post-selection inference method developed in
 - J. Qian, Y. Tanigawa, W. Du, M. Aguirre, C. Chang, R. Tibshirani, M. A. Rivas, T. Hastie. [A fast and scalable framework for large-scale and ultrahigh-dimensional sparse regression with application to the UK Biobank](https://doi.org/10.1371/journal.pgen.1009141). PLoS Genet. 16, e1009141 (2020)
 - R. Li, C. Chang, J. M. Justesen, Y. Tanigawa, J. Qiang, T. Hastie, M. A. Rivas, R. Tibshirani. [Fast Lasso method for large-scale and ultrahigh-dimensional Cox model with applications to UK Biobank](https://doi.org/doi:10.1093/biostatistics/kxaa038). Biostatistics. 23(2), 522-540 (2020).
 - R. Li, C. Chang, Y. Tanigawa, B. Narasimhan, T. Hastie, R. Tibshirani, M. A. Rivas. [Fast Numerical Optimization for Genome Sequencing Data in Population Biobanks](https://doi.org/10.1093/bioinformatics/btab452). Bioinformatics 37(22), 4148-4155 (2021).
+
+### Publicly-available polygenic score models trained with the `snpnet` package
+
+- Y. Tanigawa, M. Kellis. [Power of inclusion: Enhancing polygenic prediction with admixed individuals](https://doi.org/10.1016/j.ajhg.2023.09.013). Am J Hum Genet. 110, 1888-1902 (2023).
+  - [Data browser](https://ipgs.mit.edu/tanigawakellis2023), [PGS Catalog (PGP000502)](https://www.pgscatalog.org/publication/PGP000502/)
+- Y. Tanigawa, J. Qian, G. R. Venkataraman, J. M. Justesen, R. Li, R. Tibshirani, T. Hastie, M. A. Rivas. [Significant Sparse Polygenic Risk Scores across 813 traits in UK Biobank](https://doi.org/10.1371/journal.pgen.1010105). PLOS Genet. 18(3), e1010105 (2022).
+  - [Data browser](https://biobankengine.stanford.edu/prs), [PGS Catalog (PGP000244)](https://www.pgscatalog.org/publication/PGP000244/)
+- N. Sinnott-Armstrong, Y. Tanigawa, D. Amar, N. J. Mars, C. Benner, M. Aguirre, G. R. Venkataraman, M. Wainberg, H. M. Ollila, T. Kiiskinen, A. S. Havulinna, J. P. Pirruccello, J. Qian, A. Shcherbina, FinnGen, F. Rodriguez, T. L. Assimes, V. Agarwala, R. Tibshirani, T. Hastie, S. Ripatti, J. K. Pritchard, M. J. Daly, M. A. Rivas. [Genetics of 35 blood and urine biomarkers in the UK Biobank](https://rdcu.be/cdMmM). Nat Gen. 53(2), 185-194 (2021).
+  - [PGS Catalog (PGP000128)](https://www.pgscatalog.org/publication/PGP000128/)
+- E. Flynn, Y. Tanigawa, F. Rodriguez, R. B. Altman, N. Sinnott-Armstrong, M. A. Rivas. [Sex-specific genetic effects across biomarkers](https://rdcu.be/b6DJF). Eur J Hum Genet, 29(1), 154-163 (2021)
+  - [PGS Catalog (PGP000097)](https://www.pgscatalog.org/publication/PGP000097/)
